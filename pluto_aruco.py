@@ -5,7 +5,7 @@ from plutopy import plutoDrone
 import threading
 
 class plutoArUco:
-    def __init__(self, drone : plutoDrone) -> None:
+    def __init__(self, drone : plutoDrone, arucoID : int = 43) -> None:
         self.PIDdelay = 0.001
         self.drone = drone
 
@@ -22,7 +22,7 @@ class plutoArUco:
 
         self.procs = [self.arucoPIDThread]
 
-        self.aruco = arucoGPS(self.state)
+        self.aruco = arucoGPS(self.state, arucoID)
 
         sleep(1)
 
