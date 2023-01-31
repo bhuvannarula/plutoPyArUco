@@ -20,6 +20,8 @@ class video:
         self.video.set(cv.CAP_PROP_FRAME_WIDTH, self.dim[0])
         self.video.set(cv.CAP_PROP_FRAME_HEIGHT, self.dim[1])
         self.video.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc(*'MJPG'))
+        print(self.video.get(cv.CAP_PROP_EXPOSURE))
+        print(self.video.get(cv.CAP_PROP_ISO_SPEED))
         self.video.set(cv.CAP_PROP_EXPOSURE, -6)
         self.video.set(cv.CAP_PROP_ISO_SPEED, -8)
         self.video.set(cv.CAP_PROP_FOCUS, 255)
