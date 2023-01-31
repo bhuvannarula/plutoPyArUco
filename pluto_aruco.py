@@ -107,7 +107,8 @@ class plutoArUco:
         for _th in self._threads[1:]:
             _th.join()
         self.drone.control.kill()
-        self.drone.disconnect()
+        if self.drone._threadsRunning:
+            self.drone.disconnect()
 
     def stop(self):
         self._threadsRunning = False

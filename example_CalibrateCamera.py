@@ -1,16 +1,16 @@
 from pluto_aruco import *
 from plutopy import plutoDrone
 
-drone = plutoDrone()
+drone = plutoDrone() 
 
-aruco = plutoArUco(drone, arucoID=43)
+aruco = plutoArUco(drone, arucoID=85)
 
 aruco.debug = True
 
 aruco.setOrigin()
 print(aruco.origin)
 
-aruco.start() # Starts the PID script
+#aruco.start() # Starts the PID script
 
 # Press q to close camera feed
 

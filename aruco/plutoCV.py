@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 from .common import *
 
-calib_path = "plutopy/aruco/calib_data/MultiMatrix.npz"
+calib_path = "aruco/calib_data/matrix.npy"
 
 FRAME_DELAY = 0
 
@@ -21,16 +21,18 @@ class video:
         self.video.set(cv.CAP_PROP_FRAME_HEIGHT, self.dim[1])
         self.video.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc(*'MJPG'))
         self.video.set(cv.CAP_PROP_EXPOSURE, -6)
-        self.video.set(cv.CAP_PROP_ISO_SPEED, -7)
+        self.video.set(cv.CAP_PROP_ISO_SPEED, -8)
+        self.video.set(cv.CAP_PROP_FOCUS, 255)
         #self.video.set(cv.CAP_PROP_BUFFERSIZE, 1)
         #self.video.set(cv.CAP_PROP_FRAME_COUNT, 1)
         #self.video.set(cv.CAP_PROP_ISO_SPEED, 1/10000)
+        #print(self.video.set(cv.CAP_PROP_CONTRAST, 240.0))
 
     def read(self):
         ret, frame = self.video.read()
         if not ret:
             raise ValueError
-        frame = cv.rotate(frame, cv.ROTATE_180)
+        #frame = cv.rotate(frame, cv.ROTATE_180)
         
         return frame
 
@@ -38,23 +40,26 @@ class arucoGPS:
     def __init__(self, state : arucoState, aruco_ID = 43) -> None:
         self.debug = False
 
-        calib = np.load(calib_path)
+        calib = np.load(calib_path, allow_pickle=True)
         self.video = video()
 
         self.target_id = aruco_ID
 
-        self.cam_mat = calib["camMatrix"]
-        self.dist_coef = calib["distCoef"]
+        #self.cam_mat = calib["camMatrix"]
+        #self.dist_coef = calib["distCoef"]
+        self.cam_mat = calib[0]
+        self.dist_coef = calib[1]
 
         # TODO : currently not used!
-        self.MARKER_SIZE_1 = 6 # cm
+        self.MARKER_SIZE_1 = 3.3 # cm
         self.MARKER_SIZE_2 = 6.5 # cm
 
-        self.marker_dict = cv.aruco.Dictionary_get(cv.aruco.DICT_4X4_50)
+        self.marker_dict = cv.aruco.Dictionary_get(cv.aruco.DICT_ARUCO_ORIGINAL)
         self.param_markers = cv.aruco.DetectorParameters_create()
 
         # Dictionary to store coords of all detected markers
         self.coord_data = {}
+        self.rvec = {}
 
         self.dronePos = state
 
@@ -66,7 +71,7 @@ class arucoGPS:
         gray_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
         # Optional Threshold Filter, default thresh = 80
-        ret, gray_frame = cv.threshold(gray_frame, 80, 255, cv.THRESH_BINARY)
+        #ret, gray_frame = cv.threshold(gray_frame, 100, 255, cv.THRESH_BINARY)
 
         # Detecting Markers
         marker_corners, marker_IDs, reject = cv.aruco.detectMarkers(
@@ -76,11 +81,11 @@ class arucoGPS:
         if marker_corners:
             total_markers = range(0, len(marker_IDs))
             for ids, corners, i in zip(marker_IDs, marker_corners, total_markers):
-                rVec, tVec, _ = cv.aruco.estimatePoseSingleMarkers(marker_corners, self.MARKER_SIZE_2, self.cam_mat, self.dist_coef)
+                rVec, tVec, _ = cv.aruco.estimatePoseSingleMarkers(marker_corners, self.MARKER_SIZE_1, self.cam_mat, self.dist_coef)
                 (rVec - tVec).any()
 
                 # Drawing Markers
-                #cv.drawFrameAxes(frame, self.cam_mat, self.dist_coef, rVec[i], tVec[i], 4, 4)
+                cv.drawFrameAxes(frame, self.cam_mat, self.dist_coef, rVec[i], tVec[i], 4, 4)
                 cv.polylines(frame, [corners.astype(np.int32)], True, (0, 255, 255), 4, cv.LINE_AA)
                 
                 corners = corners.reshape(4, 2)
@@ -115,7 +120,17 @@ class arucoGPS:
                 _target_X = int(target.X * tc) + self.video.center[X]
                 _target_Y = int(target.Y * tc) + self.video.center[Y]
 
-                cv.line(frame, (_target_X, _target_Y), (_t_Xo, _t_Yo), (0, 0, 255), 4, cv.LINE_AA)
+                #cv.line(frame, (_target_X, _target_Y), (_t_Xo, _t_Yo), (0, 0, 255), 4, cv.LINE_AA)
+                distance = np.sqrt(tVec[i][0][0]**2 + tVec[i][0][1]**2 + tVec[i][0][2]**2)
+                #print(tVec[i][0], [_t_X, _t_Y, _t_Z])
+
+                #print(tVec.shape)
+                #print(tVec[i][0][0], tVec[i][0][1], tVec[i][0][2])
+                _t_X = tVec[i][0][0]
+                _t_Y = tVec[i][0][1]
+                _t_Z = tVec[i][0][2]
+                self.coord_data[ids[0]] = [_t_X, _t_Y, _t_Z]
+                self.rvec[ids[0]] = rVec[i][0]
 
                 cv.putText(
                     frame,
@@ -139,11 +154,37 @@ class arucoGPS:
                 )
             
             if self.target_id in self.coord_data:
+                t_id = self.target_id
+                g_id = 5
+
                 self.dronePos.update(self.coord_data[self.target_id])
                 if self.debug : print("Coordinates", self.coord_data[self.target_id])
+                ref_frame = self.coord_data[g_id]
+                ref_rot_mtx = cv.Rodrigues(self.rvec[g_id])[0].reshape((3,3))
+                ref_rot_mtx_inv = np.transpose(ref_rot_mtx)
+                
+                #tar_frame = 
+                tar_rot_mtx = cv.Rodrigues(self.rvec[t_id])[0].reshape((3,3))
+                tar_rot_mtx_inv = np.transpose(tar_rot_mtx)
+                new_mtx = ref_rot_mtx*tar_rot_mtx_inv
+                cos1 = new_mtx[0][0]
+                cos2 = new_mtx[1][1]
+                sin1 = new_mtx[0][1]
+                sin2 = -new_mtx[1][0]
+                cosn = 0.5*(cos1 + cos2)
+                sinn = 0.5*(sin1 + sin2)
+                ang1 = 180*np.arccos(cosn)/np.pi
+                ang2 = 180*np.arcsin(sinn)/np.pi
+                #print(cosn, sinn)
+                #print(ang1, ang2)\
+                rets = cv.RQDecomp3x3(tar_rot_mtx)
+                print(rets[0][2])
+            
+                #print(self.rvec[self.target_id])
+
 
         cv.imshow("frame", cv.resize(frame, self.video.dim_rescaled, cv.INTER_LINEAR))
-        if self.debug : cv.imshow("gray", cv.resize(gray_frame, self.video.dim_rescaled, cv.INTER_LINEAR))
+        cv.imshow("gray", gray_frame)# cv.resize(gray_frame, self.video.dim_rescaled, cv.INTER_LINEAR))
         key = cv.waitKey(1)
         if key == ord("q"):
             return self.stop()

@@ -12,17 +12,17 @@ class positionPID:
         self.iPOS = [0]*3
         self.dPOS = [0]*3
 
-        self.pPOS[X] = 0.21 # 0.2
+        self.pPOS[X] = 3.6 # 0.2
         self.iPOS[X] = 0#.000005
-        self.dPOS[X] = 0.48 # 0.5
+        self.dPOS[X] = 9#50#10 # 0.5
 
-        self.pPOS[Y] = 0.21
+        self.pPOS[Y] = 3.6
         self.iPOS[Y] = 0#.000005
-        self.dPOS[Y] = 0.48
+        self.dPOS[Y] = 9#50#40
 
-        self.pPOS[Z] = 2
-        self.iPOS[Z] = 0.2
-        self.dPOS[Z] = 0.1
+        self.pPOS[Z] = 0#2
+        self.iPOS[Z] = 0#.2
+        self.dPOS[Z] = 0#.1
 
         self.iTerm = [0]*3
         self.last_vel = [0]*3
@@ -85,6 +85,6 @@ class positionPID:
 
         self.last_vel = [vel_X, vel_Y, vel_Z]
 
-        self.last_result = [result_X, result_Y, result_Z]
+        self.last_result = [result_X, result_Y, 100]
 
-        return (result_X, result_Y, result_Z)
+        return (result_X, result_Y, 100)
