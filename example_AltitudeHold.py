@@ -12,7 +12,7 @@ drone.control.throttleMode()
 drone.start()
 
 # Creating an ArUco Control instance, that will perform PID on drone
-aruco = plutoArUco(drone, arucoID=85)
+aruco = plutoArUco(drone, targetID = 85)
 # This should launch a camera feed.
 
 # Now, place the drone physically to a desired point, and set it as origin
@@ -25,7 +25,7 @@ print(aruco.origin)
 target = [
     aruco.origin.X,
     aruco.origin.Y,
-    105 # cm, Roughly 3.5 feet (3.5*30 = 105)
+    20 # cm, Roughly 3.5 feet (3.5*30 = 105)
 ]
 # Z (cm) should be height from ground (specifically, origin set initially)
 aruco.setTarget(*target)

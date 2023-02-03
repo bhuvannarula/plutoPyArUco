@@ -1,7 +1,6 @@
-from time import perf_counter_ns as nowtime
 from time import sleep
 from math import sin, cos
-from .filter import lowPassFilter
+from .filter import *
 
 X, Y, Z = 0, 1, 2
 
@@ -38,9 +37,10 @@ class arucoState:
         self.X_new = [0]*3
         self.X_old = [0]*3
         self.X = [0]*3
-        self.V = [0]*3
 
-        self.Z = lowPassFilter()
+        self.rX = lowPassFilter()
+        self.rY = lowPassFilter()
+        self.rZ = lowPassFilter()
 
         self.now = nowtime()
         self.old = self.now
@@ -62,22 +62,12 @@ class arucoState:
         self.X_new = list(coord_data)
         self.old = self.now
         self.now = nowtime()
-        dt = self.now - self.old
 
         # Applying a simple deadband filter to reduce flickering in data
-        _t = 0.1
-        _X = deadband(self.X_new[X], self.X_old[X], _t)
-        _Y = deadband(self.X_new[Y], self.X_old[Y], _t)
-        #_Z = deadband(self.X_new[Z], self.X_old[Z], 0.05)
-        _tZ = int(self.X_new[Z])
-        self.Z.update(_tZ)
-        _Z = self.Z.get()
-        #A_Z = self.X_new[Z]
-        _tt = [_X, _Y, _Z]
-
-        if dt:
-            for ie in range(3):
-                self.V[ie] = (_tt[ie] -  self.X_old[ie]) * dt / self.unit
+        self.rX.update(coord_data[X])
+        self.rY.update(coord_data[Y])
+        self.rZ.update(coord_data[Z])
+        _tt = [self.rX.get(), self.rY.get(), self.rZ.get()]
 
         self.X_old = list(self.X)
         self.X = list(_tt)

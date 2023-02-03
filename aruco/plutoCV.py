@@ -1,8 +1,10 @@
 import cv2 as cv
 import numpy as np
 from .common import *
+from .filter import lowPassFilter
 
 calib_path = "aruco/calib_data/matrix.npy"
+#calib_path = "aruco/calib_data/MultiMatrix.npz"
 
 FRAME_DELAY = 0
 
@@ -22,8 +24,10 @@ class video:
         self.video.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc(*'MJPG'))
         print(self.video.get(cv.CAP_PROP_EXPOSURE))
         print(self.video.get(cv.CAP_PROP_ISO_SPEED))
-        self.video.set(cv.CAP_PROP_EXPOSURE, -6)
+        self.video.set(cv.CAP_PROP_EXPOSURE, -8)
         self.video.set(cv.CAP_PROP_ISO_SPEED, -8)
+        print(self.video.get(cv.CAP_PROP_EXPOSURE))
+        print(self.video.get(cv.CAP_PROP_ISO_SPEED))
         self.video.set(cv.CAP_PROP_FOCUS, 255)
         #self.video.set(cv.CAP_PROP_BUFFERSIZE, 1)
         #self.video.set(cv.CAP_PROP_FRAME_COUNT, 1)
@@ -39,20 +43,20 @@ class video:
         return frame
 
 class arucoGPS:
-    def __init__(self, state : arucoState, aruco_ID = 43) -> None:
+    def __init__(self, state : arucoState, target_ID : int, targetAngle : lowPassFilter) -> None:
         self.debug = False
 
         calib = np.load(calib_path, allow_pickle=True)
         self.video = video()
 
-        self.target_id = aruco_ID
+        self.target_id = target_ID
+        #self.ground_id = ground_ID
 
         #self.cam_mat = calib["camMatrix"]
         #self.dist_coef = calib["distCoef"]
         self.cam_mat = calib[0]
         self.dist_coef = calib[1]
 
-        # TODO : currently not used!
         self.MARKER_SIZE_1 = 3.3 # cm
         self.MARKER_SIZE_2 = 6.5 # cm
 
@@ -64,6 +68,7 @@ class arucoGPS:
         self.rvec = {}
 
         self.dronePos = state
+        self.targetAngle = targetAngle
 
     def loop(self, target : XYZ):
         try:
@@ -128,9 +133,9 @@ class arucoGPS:
 
                 #print(tVec.shape)
                 #print(tVec[i][0][0], tVec[i][0][1], tVec[i][0][2])
-                _t_X = tVec[i][0][0]
-                _t_Y = tVec[i][0][1]
-                _t_Z = tVec[i][0][2]
+                _t_X = int(tVec[i][0][0])
+                _t_Y = int(tVec[i][0][1])
+                _t_Z = int(tVec[i][0][2])
                 self.coord_data[ids[0]] = [_t_X, _t_Y, _t_Z]
                 self.rvec[ids[0]] = rVec[i][0]
 
@@ -155,38 +160,34 @@ class arucoGPS:
                     cv.LINE_AA,
                 )
             
-            if self.target_id in self.coord_data:
+            if (self.target_id in self.coord_data):# and (self.ground_id in self.coord_data):
                 t_id = self.target_id
-                g_id = 5
+                #g_id = 5
 
                 self.dronePos.update(self.coord_data[self.target_id])
                 if self.debug : print("Coordinates", self.coord_data[self.target_id])
-                ref_frame = self.coord_data[g_id]
-                ref_rot_mtx = cv.Rodrigues(self.rvec[g_id])[0].reshape((3,3))
-                ref_rot_mtx_inv = np.transpose(ref_rot_mtx)
+                #ref_frame = self.coord_data[g_id]
+                #ref_rot_mtx = cv.Rodrigues(self.rvec[g_id])[0].reshape((3,3))
+                #ref_rot_mtx_inv = np.transpose(ref_rot_mtx)
                 
                 #tar_frame = 
                 tar_rot_mtx = cv.Rodrigues(self.rvec[t_id])[0].reshape((3,3))
                 tar_rot_mtx_inv = np.transpose(tar_rot_mtx)
-                new_mtx = ref_rot_mtx*tar_rot_mtx_inv
-                cos1 = new_mtx[0][0]
-                cos2 = new_mtx[1][1]
-                sin1 = new_mtx[0][1]
-                sin2 = -new_mtx[1][0]
-                cosn = 0.5*(cos1 + cos2)
-                sinn = 0.5*(sin1 + sin2)
-                ang1 = 180*np.arccos(cosn)/np.pi
-                ang2 = 180*np.arcsin(sinn)/np.pi
-                #print(cosn, sinn)
-                #print(ang1, ang2)\
+                #new_mtx = ref_rot_mtx*tar_rot_mtx_inv
+                #rets = cv.RQDecomp3x3(tar_rot_mtx)
                 rets = cv.RQDecomp3x3(tar_rot_mtx)
-                print(rets[0][2])
+                #print(rets[0][2] + 180)
+                self.targetAngle.update(rets[0][2] + 180) 
+                #tarAng = self.targetAngle.get()
+
+                #retsg = cv.RQDecomp3x3(ref_rot_mtx)
+                #print(int(tarAng))#, rets[0][2])
             
                 #print(self.rvec[self.target_id])
 
 
         cv.imshow("frame", cv.resize(frame, self.video.dim_rescaled, cv.INTER_LINEAR))
-        cv.imshow("gray", gray_frame)# cv.resize(gray_frame, self.video.dim_rescaled, cv.INTER_LINEAR))
+        #cv.imshow("gray", cv.resize(gray_frame, self.video.dim_rescaled, cv.INTER_LINEAR))
         key = cv.waitKey(1)
         if key == ord("q"):
             return self.stop()

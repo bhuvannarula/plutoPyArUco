@@ -1,17 +1,18 @@
 from aruco.plutoCV import *
-from aruco.plutoPID import *
+from aruco.plutoPID1 import *
 from plutopy import plutoDrone
 
 import threading
 
 class plutoArUco:
-    def __init__(self, drone : plutoDrone, arucoID : int = 43) -> None:
+    def __init__(self, drone : plutoDrone, targetID : int = 43) -> None:
         self.PIDdelay = 0.001
         self.drone = drone
 
         self.state = arucoState()
         self.target = XYZ()
         self.origin = XYZ()
+        self.droneAngle = lowPassFilter()
 
         self.trims = []
         self._err = []
@@ -22,7 +23,7 @@ class plutoArUco:
 
         self.procs = [self.arucoPIDThread]
 
-        self.aruco = arucoGPS(self.state, arucoID)
+        self.aruco = arucoGPS(self.state, targetID, self.droneAngle)
 
         sleep(1)
 
@@ -41,20 +42,25 @@ class plutoArUco:
                 self.stop_rest()
                 break
 
-    def setOrigin(self, iter_n : int = 10):
+    def setOrigin(self, iter_n : int = 50):
         '''
         Reading first 'iter_n' values & averaging to find origin, ground
         '''
         origin = XYZ()
+        _tZ = lowPassFilter()
         for _i  in range(iter_n):
             sleep(self.PIDdelay)
             _tt = self.state.X
             origin.X += _tt[X]
             origin.Y += _tt[Y]
             origin.Z += _tt[Z]
-        self.origin.X = int(origin.X/iter_n)
-        self.origin.Y = int(origin.Y/iter_n)
+            origin.A += self.droneAngle.get()
+        self.origin.X = round(origin.X/iter_n, 2)
+        self.origin.Y = round(origin.Y/iter_n, 2)
         self.origin.Z = int(origin.Z/iter_n)
+        #self.origin.Z = _tZ.get()
+        self.origin.A = round(origin.A/iter_n, 2)
+        print(self.origin.A)
 
     def setTarget(self, X, Y, Z):
         if (self.origin.Z == 0):
@@ -66,24 +72,41 @@ class plutoArUco:
             self.target.Z = Z
 
     def arucoPIDThread(self):
-        # Initializing PID class
         self.positionPID = positionPID()
+
+        rolll = lowPassFilter()
+        pitcc = lowPassFilter()
 
         while self._threadsRunning:
             sleep(self.PIDdelay)
+            angle = radians(self.droneAngle.get() - 90)
+            cosA = cos(angle)
+            sinA = sin(angle)
             _tt = self.state.X
+            _eX = self.target.X - _tt[X]
+            _eY = self.target.Y - _tt[Y]
+            _eX = _eX * cosA + _eY * sinA
+            _eY = _eY * cosA - _eX * sinA
             _err = [
-                self.target.X - _tt[X],
-                self.target.Y - _tt[Y],
-                self.target.Z - (self.origin.Z - _tt[Z])
+                _eX,
+                _eY,
+                self.target.Z - (self.origin.Z - _tt[Z]),
+                angle
             ]
             if self.debug: print("Pos Err:", _err)
             
             pitch, roll, throttle = self.positionPID.output(_err, self.state)
-            pitch = constrain(pitch, -80, 80)
-            roll = constrain(roll, -80, 80)
-            throttle = constrain(throttle, -600, 600)
-
+            pitch = constrain(pitch, -405, 405)
+            roll = constrain(roll, -405, 405)
+            throttle = constrain(throttle, -150, 150)
+            #pitch = pitch * cosA + roll * sinA
+            #roll = roll * cosA - pitch * sinA
+            print(*_err[:2], pitch, roll)
+            pitcc.update(pitch)
+            rolll.update(roll)
+            #pitch = pitcc.get()-180
+            #roll = rolll.get()-180
+            #print(throttle)
             if self.debug: print("Trim Val:", roll, pitch, throttle)
             self.trims = [pitch, roll, throttle]
             self._err = _err
