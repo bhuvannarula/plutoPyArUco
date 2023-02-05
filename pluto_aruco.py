@@ -2,14 +2,15 @@ from aruco.plutoCV import *
 from aruco.plutoPID import *
 from plutopy import plutoDrone
 import csv
+from kalman_git import *
 
 import threading
 
 class plutoArUco:
-    def __init__(self, drone : plutoDrone, targetID : int = 43) -> None:
+    def __init__(self, drone : plutoDrone, k : KalmanFilter, targetID : int = 43) -> None:
         self.PIDdelay = 0.001
         self.drone = drone
-
+        self.k = k
         self.state = arucoState()
         self.target = XYZ()
         self.origin = XYZ()
@@ -74,10 +75,12 @@ class plutoArUco:
             self.target.X = X
             self.target.Y = Y
             self.target.Z = Z
+    def configureKalman(self,zvar,zaccelvar,zaccelbiasvar):
+        self.k.Configure(zvar,zaccelvar,zaccelbiasvar,drone.state.alt,0,drone.state.accZ)
 
     def arucoPIDThread(self):
         self.positionPID = positionPID()
-
+        self.k.Update()
         rolll = lowPassFilter()
         pitcc = lowPassFilter()
 
@@ -95,7 +98,7 @@ class plutoArUco:
             _err = [
                 _eX,
                 _eY,
-                self.target.Z - (self.origin.Z - _tt[Z]),
+                self.target.Z - (self.origin.Z - self.k.z_),
                 angle
             ]
             if self.debug: print("Pos Err:", _err)

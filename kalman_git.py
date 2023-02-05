@@ -22,7 +22,7 @@ class KalmanFilter:
         self.Pav_ = 0.0
         self.Paa_ = 100000.0
 
-    def Update(self, z, a, dt, pZ, pV):
+    def Update(self, z, a, dt):
         accel = a - self.aBias_
         self.v_ += accel * dt
         self.z_ += self.v_ * dt
@@ -89,3 +89,4 @@ class KalmanFilter:
         self.Pzv_ -= kz * self.Pvz_
         self.Pvv_ -= kz * self.Pvv_
         self.Pva_ -= kz * self.Pva_
+
