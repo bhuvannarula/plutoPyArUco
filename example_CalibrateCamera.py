@@ -17,7 +17,7 @@ target = [
 ]
 aruco.setTarget(*target)
 
-#aruco.start() # Starts the PID script
+aruco.start() # Starts the PID script
 # Press q to close camera feed
 
 # Now, wait until user presses 'Enter' key, then stop all code, and close the socket.

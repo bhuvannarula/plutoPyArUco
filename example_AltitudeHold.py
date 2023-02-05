@@ -6,7 +6,8 @@ from plutopy import plutoDrone
 drone = plutoDrone()
 
 # Set drone to throttle mode, as we will be using manual PID through ArUco Detection
-drone.control.throttleMode()
+#drone.control.throttleMode()
+drone.control.altholdMode()
 
 # Starting MSP Communication with drone
 drone.start()
@@ -25,7 +26,7 @@ print(aruco.origin)
 target = [
     aruco.origin.X,
     aruco.origin.Y,
-    20 # cm, Roughly 3.5 feet (3.5*30 = 105)
+    30 # cm, Roughly 3.5 feet (3.5*30 = 105)
 ]
 # Z (cm) should be height from ground (specifically, origin set initially)
 aruco.setTarget(*target)

@@ -1,0 +1,14 @@
+Issue # 1
+Scaling Factor in X, Y, Z is completely fucked.
+
+TODO : Correct this scaling factor.
+All formulas are already implemented for scaling, 
+just the factor needs to be modified.
+
+1. Factor for Z (Altitude)
+In file 'aruco/plutoCV.py', Line 99,
+calib_val =  [a, b]
+    a -> Area of ArUco being detected (in pixels^2)
+    b -> Distance of ArUco from camera (in cm)
+
+to fix, just place ArUco just perpendicular to camera, and record the Area 

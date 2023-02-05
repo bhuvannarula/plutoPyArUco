@@ -39,6 +39,7 @@ class arucoState:
         self.X_old = [0]*3
         self.X = [0]*3
         self.V = [0]*3
+        self.dt = 0
 
         self.Z = lowPassFilter()
 
@@ -69,15 +70,16 @@ class arucoState:
         _X = deadband(self.X_new[X], self.X_old[X], _t)
         _Y = deadband(self.X_new[Y], self.X_old[Y], _t)
         #_Z = deadband(self.X_new[Z], self.X_old[Z], 0.05)
-        _tZ = int(self.X_new[Z])
+        _tZ = round(self.X_new[Z],1)
         self.Z.update(_tZ)
         _Z = self.Z.get()
         #A_Z = self.X_new[Z]
         _tt = [_X, _Y, _Z]
 
         if dt:
+            self.dt = dt
             for ie in range(3):
-                self.V[ie] = (_tt[ie] -  self.X_old[ie]) * dt / self.unit
+                self.V[ie] = (_tt[ie] -  self.X_old[ie]) * self.unit / dt
 
         self.X_old = list(self.X)
         self.X = list(_tt)

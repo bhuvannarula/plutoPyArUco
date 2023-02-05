@@ -1,6 +1,7 @@
 from aruco.plutoCV import *
-from aruco.plutoPID1 import *
+from aruco.plutoPID import *
 from plutopy import plutoDrone
+import csv
 
 import threading
 
@@ -22,6 +23,9 @@ class plutoArUco:
         self._threads = []
 
         self.procs = [self.arucoPIDThread]
+
+        self.file = open(r'C:\Users\Bhuvan Narula\Downloads\dronedump.csv', 'w', newline='\n')
+        self.csv = csv.writer(self.file)
 
         self.aruco = arucoGPS(self.state, targetID, self.droneAngle)
 
@@ -79,7 +83,8 @@ class plutoArUco:
 
         while self._threadsRunning:
             sleep(self.PIDdelay)
-            angle = radians(self.droneAngle.get() - 90)
+            #sleep(0.1)
+            angle = radians(self.origin.A - 90)
             cosA = cos(angle)
             sinA = sin(angle)
             _tt = self.state.X
@@ -96,12 +101,13 @@ class plutoArUco:
             if self.debug: print("Pos Err:", _err)
             
             pitch, roll, throttle = self.positionPID.output(_err, self.state)
-            pitch = constrain(pitch, -405, 405)
-            roll = constrain(roll, -405, 405)
-            throttle = constrain(throttle, -150, 150)
+            pitch = constrain(pitch, -400, 400)
+            roll = constrain(roll, -500, 500)
+            throttle = constrain(throttle, -300, 300)
             #pitch = pitch * cosA + roll * sinA
             #roll = roll * cosA - pitch * sinA
-            print(*_err[:2], pitch, roll)
+            self.csv.writerow([*_err, pitch, roll, throttle])
+            print(_err[2], throttle)
             pitcc.update(pitch)
             rolll.update(roll)
             #pitch = pitcc.get()-180
@@ -111,6 +117,8 @@ class plutoArUco:
             self.trims = [pitch, roll, throttle]
             self._err = _err
 
+            #self.drone.MSP.sendRequestMSP_SET_ACC_TRIM(-int(roll), -int(pitch/2.5))
+
             self.drone.activeState.rcRoll = 1500 + int(roll)
             self.drone.activeState.rcPitch = 1500 + int(pitch)
             self.drone.activeState.rcThrottle = 1500 + int(throttle)
@@ -118,7 +126,7 @@ class plutoArUco:
     def start(self):
         if (self.origin.Z == 0):
             print("Warning: Origin not set!")
-        self._threads = []
+        #self._threads = []
         self._threadsRunning = True
         for proc in self.procs:
             _thread = threading.Thread(target=proc)
@@ -129,6 +137,8 @@ class plutoArUco:
         self._threadsRunning = False
         for _th in self._threads[1:]:
             _th.join()
+        self.file.flush()
+        self.file.close()
         self.drone.control.kill()
         if self.drone._threadsRunning:
             self.drone.disconnect()

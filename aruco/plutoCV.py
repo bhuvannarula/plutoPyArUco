@@ -133,9 +133,9 @@ class arucoGPS:
 
                 #print(tVec.shape)
                 #print(tVec[i][0][0], tVec[i][0][1], tVec[i][0][2])
-                _t_X = int(tVec[i][0][0])
-                _t_Y = int(tVec[i][0][1])
-                _t_Z = int(tVec[i][0][2])
+                _t_X = round(tVec[i][0][0],1)
+                _t_Y = round(tVec[i][0][1],1)
+                _t_Z = round(tVec[i][0][2],1)
                 self.coord_data[ids[0]] = [_t_X, _t_Y, _t_Z]
                 self.rvec[ids[0]] = rVec[i][0]
 
@@ -172,7 +172,7 @@ class arucoGPS:
                 
                 #tar_frame = 
                 tar_rot_mtx = cv.Rodrigues(self.rvec[t_id])[0].reshape((3,3))
-                tar_rot_mtx_inv = np.transpose(tar_rot_mtx)
+                #tar_rot_mtx_inv = np.transpose(tar_rot_mtx)
                 #new_mtx = ref_rot_mtx*tar_rot_mtx_inv
                 #rets = cv.RQDecomp3x3(tar_rot_mtx)
                 rets = cv.RQDecomp3x3(tar_rot_mtx)
@@ -188,7 +188,7 @@ class arucoGPS:
 
         cv.imshow("frame", cv.resize(frame, self.video.dim_rescaled, cv.INTER_LINEAR))
         #cv.imshow("gray", cv.resize(gray_frame, self.video.dim_rescaled, cv.INTER_LINEAR))
-        key = cv.waitKey(1)
+        key = cv.waitKey(2)
         if key == ord("q"):
             return self.stop()
         return 0

@@ -10,12 +10,12 @@ class positionPID:
 
         self.pPOS = [0]*3
 
-        pp = 1
+        pp = 3
         ii = 0
         dd = 0
 
-        self.pPOS[X] = 1.2
-        self.pPOS[Y] = 1.2 # 1.6
+        self.pPOS[X] = 1
+        self.pPOS[Y] = 1 # 1.6
         self.pPOS[Z] = 0
 
         self.pVEL = [0]*3
@@ -23,11 +23,11 @@ class positionPID:
         self.dVEL = [0]*3
 
         self.pVEL[X] = pp # 2.4
-        self.iVEL[X] = ii
+        self.iVEL[X] = 0#.0001
         self.dVEL[X] = dd # 2
 
         self.pVEL[Y] = pp
-        self.iVEL[Y] = ii
+        self.iVEL[Y] = 0#.0001
         self.dVEL[Y] = dd
 
         self.pVEL[Z] = 0#3
@@ -47,14 +47,16 @@ class positionPID:
         sinA = sin(angle)
 
         # X, Y, Z -> P Controller
-        setVel_X = constrain(self.pPOS[X] * pos_err[X], -500, 500) # Vel Max : 200px/s
-        setVel_Y = constrain(self.pPOS[Y] * pos_err[Y], -500, 500) # Vel Max : 200px/s
+        vlimit = 25
+        setVel_X = constrain(self.pPOS[X] * pos_err[X], -vlimit, vlimit) # Vel Max : 200px/s
+        setVel_Y = constrain(self.pPOS[Y] * pos_err[Y], -vlimit, vlimit) # Vel Max : 200px/s
         setVel_Z = constrain(self.pPOS[Z] * pos_err[Z], -100, 100) # Vel Max : 100cm/s
 
         # Calculating Velocity
-        dt = (state.now - state.old)
-        if not dt:
-            return self.last_result
+        #dt = (state.now - state.old)
+        #if not dt:
+        #return self.last_result
+        dt = state.dt
         _newX = state.X
         _oldX = state.X_old
         #vel_X = self.unit*(_newX[X] - _oldX[X])/dt
@@ -73,9 +75,10 @@ class positionPID:
         vel_err[Z] = setVel_Z - vel_Z
 
         # Calculating the P-Term
-        result_X = constrain(self.pVEL[X] * vel_err[X], -500, 500)
-        result_Y = constrain(self.pVEL[Y] * vel_err[Y], -500, 500)
-        result_Z = constrain(self.pVEL[Z] * vel_err[Z], -500, 500)
+        plimit = 500
+        result_X = constrain(self.pVEL[X] * vel_err[X], -plimit, plimit)
+        result_Y = constrain(self.pVEL[Y] * vel_err[Y], -plimit, plimit)
+        result_Z = constrain(self.pVEL[Z] * vel_err[Z], -plimit, plimit)
         #print("P", result_Z)
 
         # Calculating the I-Term
@@ -83,8 +86,9 @@ class positionPID:
         self.iTerm[Y] += (self.iVEL[Y] * vel_err[Y]) * dt / self.unit
         self.iTerm[Z] += (self.iVEL[Z] * vel_err[Z]) * dt / self.unit
 
-        self.iTerm[X] = constrain(self.iTerm[X], -50, 50)
-        self.iTerm[Y] = constrain(self.iTerm[Y], -50, 50)
+        ilimit = 20
+        self.iTerm[X] = constrain(self.iTerm[X], -ilimit, ilimit)
+        self.iTerm[Y] = constrain(self.iTerm[Y], -ilimit, ilimit)
         self.iTerm[Z] = constrain(self.iTerm[Z], -500, 500)
         #print("I", self.iTerm)
 
@@ -93,15 +97,16 @@ class positionPID:
         result_Z += self.iTerm[Z]
 
         # Calculating the D-Term
-        result_X += constrain(self.dVEL[X] * (self.last_vel[X] - vel_X) * self.unit / dt, -100, 100)
-        result_Y += constrain(self.dVEL[Y] * (self.last_vel[Y] - vel_Y) * self.unit / dt, -100, 100)
-        result_Z += constrain(self.dVEL[Z] * (self.last_vel[Z] - vel_Z) * self.unit / dt, -100, 100)
+        dlimit = plimit*2
+        result_X += constrain(self.dVEL[X] * (self.last_vel[X] - vel_X) * self.unit / dt, -dlimit, dlimit)
+        result_Y += constrain(self.dVEL[Y] * (self.last_vel[Y] - vel_Y) * self.unit / dt, -dlimit, dlimit)
+        result_Z += constrain(self.dVEL[Z] * (self.last_vel[Z] - vel_Z) * self.unit / dt, -dlimit, dlimit)
         #print("D", result_Z)
 
         self.last_vel = [vel_X, vel_Y, vel_Z]
-        self.last_result = [result_X, result_Y, 150]
+        self.last_result = [result_X, result_Y, 130]
 
-        return (result_X, result_Y, 150)
+        return (result_X, result_Y, 130)
 
 class altitudePID:
     def __init__(self) -> None:
