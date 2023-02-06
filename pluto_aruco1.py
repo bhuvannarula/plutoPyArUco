@@ -26,7 +26,7 @@ class plutoArUco:
 
         self.procs = [self.arucoPIDThread]
 
-        self.file = open(r'C:\Users\laksh\Downloads\dronedump.csv', 'w', newline='\n')
+        self.file = open(r'C:\Users\Bhuvan Narula\Downloads\dronedump.csv', 'w', newline='\n')
         self.csv = csv.writer(self.file)
 
         self.aruco = arucoGPS(self.state, targetID, self.droneAngle)
