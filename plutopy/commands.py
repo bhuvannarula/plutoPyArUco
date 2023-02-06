@@ -123,9 +123,9 @@ class plutoControl():
         sleep(0.5)
         self.box_arm()
         self.updateCommand(1)
-        sleep(1)
+        sleep(0.5)
         self.updateCommand(0)
-        self.cmd.rcThrottle = 1700
+        self.cmd.rcThrottle = 1550
 
     def land(self):
         '''
