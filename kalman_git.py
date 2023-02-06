@@ -1,3 +1,5 @@
+from time import perf_counter_ns as nowtime
+
 class KalmanFilter:
     def __init__(self):
         pass
@@ -90,3 +92,5 @@ class KalmanFilter:
         self.Pvv_ -= kz * self.Pvv_
         self.Pva_ -= kz * self.Pva_
 
+        
+    
