@@ -14,7 +14,8 @@ aruco.setOrigin()
 print(aruco.origin)
 
 # Now that origin is set, we can set TARGET for drone
-
+zvar = 0
+zaccelvar = 0
 # So, for altitude hold, setting target:
 target = [
     aruco.origin.X,
@@ -23,8 +24,8 @@ target = [
 ]
 # Z (cm) should be height from ground (specifically, origin set initially)
 aruco.setTarget(*target)
-
-aruco.configureKalman(zvar,zaccelvar,zaccelbiasvar)
+aruco.kal = True
+aruco.configureKalman(zvar,zaccelvar,1.0)
 # Once initial target is set, we can take-off the drone, and start the PID
 drone.control.take_off()
 aruco.start() # Starts the PID script

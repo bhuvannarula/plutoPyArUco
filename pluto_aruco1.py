@@ -15,7 +15,8 @@ class plutoArUco:
         self.target = XYZ()
         self.origin = XYZ()
         self.droneAngle = lowPassFilter()
-
+        self.althold = True
+        self.kal = False 
         self.trims = []
         self._err = []
 
@@ -76,11 +77,10 @@ class plutoArUco:
             self.target.Y = Y
             self.target.Z = Z
     def configureKalman(self,zvar,zaccelvar,zaccelbiasvar):
-        self.k.Configure(zvar,zaccelvar,zaccelbiasvar,drone.state.alt,0,drone.state.accZ)
+        self.k.Configure(zvar,zaccelvar,zaccelbiasvar,drone.state.alt,0,(1-drone.state.accZ))
 
     def arucoPIDThread(self):
         self.positionPID = positionPID()
-        self.k.Update()
         rolll = lowPassFilter()
         pitcc = lowPassFilter()
 
@@ -95,15 +95,23 @@ class plutoArUco:
             _eY = self.target.Y - _tt[Y]
             _eX = _eX * cosA + _eY * sinA
             _eY = _eY * cosA - _eX * sinA
-            _err = [
+            if self.kal == True:
+                _err = [
+                    _eX,
+                    _eY,
+                    self.target.Z - (self.origin.Z - self.k.z_),
+                    angle
+                ]
+            else:
+                _err = [
                 _eX,
                 _eY,
-                self.target.Z - (self.origin.Z - self.k.z_),
+                self.target.Z - (self.origin.Z - self.drone.state.alt),
                 angle
             ]
             if self.debug: print("Pos Err:", _err)
             
-            pitch, roll, throttle = self.positionPID.output(_err, self.state)
+            pitch, roll, throttle, = self.positionPID.output(_err, self.state)
             pitch = constrain(pitch, -400, 400)
             roll = constrain(roll, -500, 500)
             throttle = constrain(throttle, -300, 300)
@@ -113,6 +121,8 @@ class plutoArUco:
             print(_err[2], throttle)
             pitcc.update(pitch)
             rolll.update(roll)
+
+            self.k.Update(self.drone.state.alt,self.drone.state.accZ,self.state.dt)
             #pitch = pitcc.get()-180
             #roll = rolll.get()-180
             #print(throttle)
@@ -121,10 +131,11 @@ class plutoArUco:
             self._err = _err
 
             #self.drone.MSP.sendRequestMSP_SET_ACC_TRIM(-int(roll), -int(pitch/2.5))
+            if self.althold == True :
 
-            self.drone.activeState.rcRoll = 1500 + int(roll)
-            self.drone.activeState.rcPitch = 1500 + int(pitch)
-            self.drone.activeState.rcThrottle = 1500 + int(throttle)
+                self.drone.activeState.rcRoll = 1500 + int(roll)
+                self.drone.activeState.rcPitch = 1500 + int(pitch)
+                self.drone.activeState.rcThrottle = 1500 + int(throttle)
         
     def start(self):
         if (self.origin.Z == 0):
