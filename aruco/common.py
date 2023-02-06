@@ -1,7 +1,7 @@
 from time import perf_counter_ns as nowtime
 from time import sleep
 from math import sin, cos
-from .filter import lowPassFilter
+from .filter import lowPassFilter, lpfilterZ
 
 X, Y, Z = 0, 1, 2
 
@@ -39,6 +39,7 @@ class arucoState:
         self.X_old = [0]*3
         self.X = [0]*3
         self.V = [0]*3
+        self.dt = 0
 
         self.Z = lowPassFilter()
 
@@ -53,7 +54,7 @@ class arucoState:
     def __repr__(self) -> str:
         return str(self.X)
     
-    def update(self, coord_data : list):
+    def update(self, coord_data : list, posZ : lpfilterZ):
         '''
         Updates the new coordinate of drone
 
@@ -62,22 +63,26 @@ class arucoState:
         self.X_new = list(coord_data)
         self.old = self.now
         self.now = nowtime()
-        dt = self.now - self.old
+        #dt = self.now - self.old
+        dt = posZ.newt - posZ.oldt
 
         # Applying a simple deadband filter to reduce flickering in data
         _t = 0.1
         _X = deadband(self.X_new[X], self.X_old[X], _t)
         _Y = deadband(self.X_new[Y], self.X_old[Y], _t)
-        #_Z = deadband(self.X_new[Z], self.X_old[Z], 0.05)
-        _tZ = int(self.X_new[Z])
-        self.Z.update(_tZ)
-        _Z = self.Z.get()
+        #_Z = deadband(self.X_new[Z], self.X_old[Z], 0)
+        _Z = round(posZ.get(), 1)
+        #_tZ = round(self.X_new[Z],1)
+        #self.Z.update(_tZ)
+        #_Z = self.Z.get()
         #A_Z = self.X_new[Z]
         _tt = [_X, _Y, _Z]
 
         if dt:
-            for ie in range(3):
-                self.V[ie] = (_tt[ie] -  self.X_old[ie]) * dt / self.unit
+            self.dt = dt
+            for ie in range(2):
+                self.V[ie] = (_tt[ie] -  self.X_old[ie]) * self.unit / dt
+            self.V[Z] = round(self.unit * posZ.derivative(),1)
 
         self.X_old = list(self.X)
         self.X = list(_tt)

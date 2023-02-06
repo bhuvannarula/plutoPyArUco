@@ -7,6 +7,7 @@ drone = plutoDrone()
 
 # Set drone to throttle mode, as we will be using manual PID through ArUco Detection
 drone.control.throttleMode()
+#drone.control.altholdMode()
 
 # Starting MSP Communication with drone
 drone.start()

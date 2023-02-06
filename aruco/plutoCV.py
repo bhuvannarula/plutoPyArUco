@@ -1,7 +1,8 @@
 import cv2 as cv
 import numpy as np
 from .common import *
-from .filter import lowPassFilter
+from .filter import lowPassFilter, lpfilterZ
+import csv
 
 calib_path = "aruco/calib_data/matrix.npy"
 #calib_path = "aruco/calib_data/MultiMatrix.npz"
@@ -17,18 +18,18 @@ class video:
         print(self.video.isOpened())
         if not self.video.isOpened():
             raise ValueError
-        self.video.set(cv.CAP_PROP_FPS, 40)
+        self.video.set(cv.CAP_PROP_FPS, 30)
         #self.video.set(cv.CAP_PROP_AUTOFOCUS, 0)
         self.video.set(cv.CAP_PROP_FRAME_WIDTH, self.dim[0])
         self.video.set(cv.CAP_PROP_FRAME_HEIGHT, self.dim[1])
         self.video.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc(*'MJPG'))
         print(self.video.get(cv.CAP_PROP_EXPOSURE))
         print(self.video.get(cv.CAP_PROP_ISO_SPEED))
-        self.video.set(cv.CAP_PROP_EXPOSURE, -8)
-        self.video.set(cv.CAP_PROP_ISO_SPEED, -8)
+        #self.video.set(cv.CAP_PROP_EXPOSURE, -8)
+        #self.video.set(cv.CAP_PROP_ISO_SPEED, -8)
         print(self.video.get(cv.CAP_PROP_EXPOSURE))
         print(self.video.get(cv.CAP_PROP_ISO_SPEED))
-        self.video.set(cv.CAP_PROP_FOCUS, 255)
+        #self.video.set(cv.CAP_PROP_FOCUS, 1)
         #self.video.set(cv.CAP_PROP_BUFFERSIZE, 1)
         #self.video.set(cv.CAP_PROP_FRAME_COUNT, 1)
         #self.video.set(cv.CAP_PROP_ISO_SPEED, 1/10000)
@@ -67,8 +68,14 @@ class arucoGPS:
         self.coord_data = {}
         self.rvec = {}
 
+        self.file = open(r'C:\Users\Bhuvan Narula\Downloads\dronecvdump.csv', 'w', newline='\n')
+        self.csv = csv.writer(self.file)
+
         self.dronePos = state
         self.targetAngle = targetAngle
+        self.posX = lpfilterZ()
+        self.posY = lpfilterZ()
+        self.posZ = lpfilterZ()
 
     def loop(self, target : XYZ):
         try:
@@ -84,11 +91,10 @@ class arucoGPS:
         marker_corners, marker_IDs, reject = cv.aruco.detectMarkers(
             gray_frame, self.marker_dict, parameters=self.param_markers
         )
-
+        rVec, tVec, _ = cv.aruco.estimatePoseSingleMarkers(marker_corners, self.MARKER_SIZE_1, self.cam_mat, self.dist_coef)
         if marker_corners:
             total_markers = range(0, len(marker_IDs))
             for ids, corners, i in zip(marker_IDs, marker_corners, total_markers):
-                rVec, tVec, _ = cv.aruco.estimatePoseSingleMarkers(marker_corners, self.MARKER_SIZE_1, self.cam_mat, self.dist_coef)
                 (rVec - tVec).any()
 
                 # Drawing Markers
@@ -108,7 +114,7 @@ class arucoGPS:
 
                 if self.debug : print("ID", ids[0], "Area", t_area)
 
-                calib_val = [16000, 41] # Area in pixel^2, Distance in cm
+                calib_val = [16000, 37.87] # Area in pixel^2, Distance in cm
                 calib_xy_scale = 1
 
                 t_area_ref = calib_val[0]
@@ -122,8 +128,8 @@ class arucoGPS:
                 _t_Y = _t_Yo - self.video.center[Y]
                 _t_X = int(_t_X * calib_xy_scale / tc)
                 _t_Y = int(_t_Y * calib_xy_scale / tc)
-                self.coord_data[ids[0]] = [_t_X, _t_Y, _t_Z]
-
+                #self.coord_data[ids[0]] = [_t_X, _t_Y, _t_Z]
+                _t_Z1 = round(_t_Z,2)
                 _target_X = int(target.X * tc) + self.video.center[X]
                 _target_Y = int(target.Y * tc) + self.video.center[Y]
 
@@ -133,10 +139,11 @@ class arucoGPS:
 
                 #print(tVec.shape)
                 #print(tVec[i][0][0], tVec[i][0][1], tVec[i][0][2])
-                _t_X = int(tVec[i][0][0])
-                _t_Y = int(tVec[i][0][1])
-                _t_Z = int(tVec[i][0][2])
-                self.coord_data[ids[0]] = [_t_X, _t_Y, _t_Z]
+                _t_X = round(tVec[i][0][0],1)
+                _t_Y = round(tVec[i][0][1],1)
+                _t_Z = round(tVec[i][0][2],2)
+                _t_Z2 = round((_t_Z + _t_Z1)/2, 2)
+                self.coord_data[ids[0]] = [_t_X, _t_Y, _t_Z, _t_Z1, _t_Z2]
                 self.rvec[ids[0]] = rVec[i][0]
 
                 cv.putText(
@@ -160,36 +167,55 @@ class arucoGPS:
                     cv.LINE_AA,
                 )
             
-            if (self.target_id in self.coord_data):# and (self.ground_id in self.coord_data):
-                t_id = self.target_id
-                #g_id = 5
+        if (self.target_id in self.coord_data):# and (self.ground_id in self.coord_data):
+            t_id = self.target_id
+            #g_id = 5
 
-                self.dronePos.update(self.coord_data[self.target_id])
-                if self.debug : print("Coordinates", self.coord_data[self.target_id])
-                #ref_frame = self.coord_data[g_id]
-                #ref_rot_mtx = cv.Rodrigues(self.rvec[g_id])[0].reshape((3,3))
-                #ref_rot_mtx_inv = np.transpose(ref_rot_mtx)
-                
-                #tar_frame = 
-                tar_rot_mtx = cv.Rodrigues(self.rvec[t_id])[0].reshape((3,3))
-                tar_rot_mtx_inv = np.transpose(tar_rot_mtx)
-                #new_mtx = ref_rot_mtx*tar_rot_mtx_inv
-                #rets = cv.RQDecomp3x3(tar_rot_mtx)
-                rets = cv.RQDecomp3x3(tar_rot_mtx)
-                #print(rets[0][2] + 180)
-                self.targetAngle.update(rets[0][2] + 180) 
-                #tarAng = self.targetAngle.get()
+            rawX = self.coord_data[self.target_id][X]
+            self.posX.update(rawX)
+            filX = self.posX.get()
 
-                #retsg = cv.RQDecomp3x3(ref_rot_mtx)
-                #print(int(tarAng))#, rets[0][2])
+            rawY = self.coord_data[self.target_id][Y]
+            self.posY.update(rawY)
+            filY = self.posY.get()
+
+            rawZ = self.coord_data[self.target_id][Z]
+            self.posZ.update(rawZ)
+            filZ = self.posZ.get()
+            #secondZ = self.coord_data[self.target_id][3]
+            #thirdZ = self.coord_data[self.target_id][4]
+            #self.coord_data[self.target_id] = [filX, filY, filZ]
+            self.dronePos.update(self.coord_data[self.target_id], self.posZ)
+
+            self.csv.writerow([rawX, rawY, rawZ, filX, filY, filZ])#, secondZ, thirdZ])
+
+            if self.debug : print("Coordinates", self.coord_data[self.target_id])
+            #ref_frame = self.coord_data[g_id]
+            #ref_rot_mtx = cv.Rodrigues(self.rvec[g_id])[0].reshape((3,3))
+            #ref_rot_mtx_inv = np.transpose(ref_rot_mtx)
             
-                #print(self.rvec[self.target_id])
+            #tar_frame = 
+            tar_rot_mtx = cv.Rodrigues(self.rvec[t_id])[0].reshape((3,3))
+            #tar_rot_mtx_inv = np.transpose(tar_rot_mtx)
+            #new_mtx = ref_rot_mtx*tar_rot_mtx_inv
+            #rets = cv.RQDecomp3x3(tar_rot_mtx)
+            rets = cv.RQDecomp3x3(tar_rot_mtx)
+            #print(rets[0][2] + 180)
+            self.targetAngle.update(rets[0][2] + 180) 
+            #tarAng = self.targetAngle.get()
+
+            #retsg = cv.RQDecomp3x3(ref_rot_mtx)
+            #print(int(tarAng))#, rets[0][2])
+        
+            #print(self.rvec[self.target_id])
 
 
         cv.imshow("frame", cv.resize(frame, self.video.dim_rescaled, cv.INTER_LINEAR))
         #cv.imshow("gray", cv.resize(gray_frame, self.video.dim_rescaled, cv.INTER_LINEAR))
-        key = cv.waitKey(1)
+        key = cv.waitKey(2)
         if key == ord("q"):
+            self.file.flush()
+            self.file.close()
             return self.stop()
         return 0
 
