@@ -4,7 +4,6 @@ from .common import *
 from .filter import lowPassFilter
 
 calib_path = "aruco/calib_data/matrix.npy"
-#calib_path = "aruco/calib_data/MultiMatrix.npz"
 
 FRAME_DELAY = 0
 
@@ -66,7 +65,7 @@ class arucoGPS:
         self.dronePos = state
         self.targetAngle = targetAngle
 
-    def loop(self, target : XYZ):
+    def loop(self):
         try:
             frame = self.video.read()
         except:
@@ -80,13 +79,12 @@ class arucoGPS:
         marker_corners, marker_IDs, reject = cv.aruco.detectMarkers(
             gray_frame, self.marker_dict, parameters=self.param_markers
         )
+        rVec, tVec, _ = cv.aruco.estimatePoseSingleMarkers(marker_corners, self.MARKER_SIZE_1, self.cam_mat, self.dist_coef)
+        (rVec - tVec).any()
 
         if marker_corners:
             total_markers = range(0, len(marker_IDs))
             for ids, corners, i in zip(marker_IDs, marker_corners, total_markers):
-                rVec, tVec, _ = cv.aruco.estimatePoseSingleMarkers(marker_corners, self.MARKER_SIZE_1, self.cam_mat, self.dist_coef)
-                (rVec - tVec).any()
-
                 # Drawing Markers
                 cv.drawFrameAxes(frame, self.cam_mat, self.dist_coef, rVec[i], tVec[i], 4, 4)
                 cv.polylines(frame, [corners.astype(np.int32)], True, (0, 255, 255), 4, cv.LINE_AA)
@@ -127,7 +125,7 @@ class arucoGPS:
                     cv.LINE_AA,
                 )
             
-            if (self.target_id in self.coord_data):# and (self.ground_id in self.coord_data):
+            if (self.target_id in self.coord_data):
                 t_id = self.target_id
                 self.dronePos.update(self.coord_data[self.target_id])
 
@@ -140,7 +138,7 @@ class arucoGPS:
         cv.imshow("frame", cv.resize(frame, self.video.dim_rescaled, cv.INTER_LINEAR))
         #cv.imshow("gray", cv.resize(gray_frame, self.video.dim_rescaled, cv.INTER_LINEAR))
         key = cv.waitKey(2)
-        if key == ord("q"):
+        if key in [ord("q"), ord("Q")]:
             return self.stop()
         return 0
 
