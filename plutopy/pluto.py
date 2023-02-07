@@ -50,7 +50,7 @@ class plutoDrone():
         Thread that continuously sends RC Data to Drone
         '''
         #requests = [MSP_RC, MSP_ATTITUDE, MSP_RAW_IMU, MSP_ALTITUDE, MSP_ANALOG]
-        requests = [MSP_ATTITUDE, MSP_ALTITUDE, MSP_RAW_IMU, MSP_ANALOG]
+        requests = [MSP_ALTITUDE, MSP_RAW_IMU]
 
         self.MSP.sendRequestMSP_ACC_TRIM()
 
@@ -82,7 +82,11 @@ class plutoDrone():
         Thread that continuously reads response from Drone
         '''
         while (self._threadsRunning):
-            self.sock.readResponseMSP()
+            try:
+                self.sock.readResponseMSP()
+            except Exception as e:
+                print(e)
+                pass
 
     def reconnect(self):
         '''

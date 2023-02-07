@@ -16,25 +16,28 @@ class positionPID:
         pp = 6
         dd = 1
 
-        self.pPOS[X] = 4 # 8 # 0.2 (2 0/5) (4,1) (6,0.3)
+        self.pPOS[X] = 1.25 # 8 # 0.2 (2 0/5) (4,1) (6,0.3) (2, 0.625)
         self.iPOS[X] = 0#.00001
-        self.dPOS[X] = 1#9#50#10 # 0.5
+        self.dPOS[X] = 0.625#9#50#10 # 0.5
 
-        self.pPOS[Y] = 4
-        self.iPOS[Y] = 0.01
-        self.dPOS[Y] = 1#9#50#40
+        self.pPOS[Y] = 1.25
+        self.iPOS[Y] = 0.005
+        self.dPOS[Y] = 0.625#9#50#40
 
-        self.pPOS[Z] = 1#0.1#2
-        self.iPOS[Z] = 0#0.3#.015#.2
-        self.dPOS[Z] = 0#1#.1 
+        self.pPOS[Z] = 2#2#0.1#2
+        self.iPOS[Z] = 1.6#3#0.3#.015#.2
+        self.dPOS[Z] = 1.25#1.45#1#.1 
 
         self.pVEL = 4
         self.iVEL = 0.8
         self.dVEL = 0.2
 
         self.iTerm = [0]*3
+        self.lastZ = 0
         self.last_vel = [0]*3
         self.last_result = [0]*3
+
+        self.wo = 70
 
     def output(self, pos_err : list, state : arucoState):
         self.position_err[X] = pos_err[X]
@@ -61,11 +64,12 @@ class positionPID:
         vel_Y = state.V[Y]
         vel_X = vel_X * cosA + vel_Y * sinA
         vel_Y = vel_Y * cosA - vel_X * sinA
-        vel_Z = state.V[Z]
+        vel_Z = -(pos_err[Z] - self.lastZ)*state.unit/dt
+        self.lastZ = pos_err[Z]
 
         # Calculating the P-Term
-        result_X = constrain(self.pPOS[X] * pos_err[X], -500, 500)
-        result_Y = constrain(self.pPOS[Y] * pos_err[Y], -500, 500)
+        result_X = constrain(self.pPOS[X] * pos_err[X], -100, 100)
+        result_Y = constrain(self.pPOS[Y] * pos_err[Y], -100, 100)
         result_Z = constrain(self.pPOS[Z] * pos_err[Z], -200, 200)
         p_x = constrain(self.pPOS[X] * pos_err[X], -500, 500)
         p_y = constrain(self.pPOS[Y] * pos_err[Y], -500, 500)
@@ -98,6 +102,8 @@ class positionPID:
         self.lastP = [p_x,p_y,p_z]
         self.lastI = [i_x,i_y,i_z]
         self.lastD = [d_x,d_y,d_z]
+
+        result_Z += self.wo
 
         self.last_vel = [vel_X, vel_Y, vel_Z]
 

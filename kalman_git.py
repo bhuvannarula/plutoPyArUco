@@ -4,7 +4,11 @@ class KalmanFilter:
     def __init__(self):
         pass
 
-    def Configure(self, zVariance, zAccelVariance, zAccelBiasVariance, zInitial, vInitial, aBiasInitial):
+    def Configure(self, zInitial, vInitial, aBiasInitial):
+        zVariance = 0.3245 # ArUco Variance
+        zAccelVariance = 0.1622 # Accelerometer Variance
+        zAccelBiasVariance = 1.0
+
         self.zAccelVariance_ = zAccelVariance
         self.zAccelBiasVariance_ = zAccelBiasVariance
         self.zVariance_ = zVariance
@@ -88,9 +92,10 @@ class KalmanFilter:
         self.Pav_ -= ka * self.Pzv_
         self.Paa_ -= ka * self.Pza_
 
-        self.Pzv_ -= kz * self.Pvz_
-        self.Pvv_ -= kz * self.Pvv_
-        self.Pva_ -= kz * self.Pva_
+        self.Pvz_ -= kv * self.Pzz_
+        self.Pvv_ -= kv * self.Pzv_
+        self.Pva_ -= kv * self.Pza_
 
-        
-    
+        self.Pzz_ -= kz * self.Pzz_
+        self.Pzv_ -= kz * self.Pzv_
+        self.Pza_ -= kz * self.Pza_

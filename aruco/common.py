@@ -1,7 +1,7 @@
 from time import perf_counter_ns as nowtime
 from time import sleep
 from math import sin, cos
-from .filter import lowPassFilter
+from .filter import lowPassFilter, lpfilterZ
 
 X, Y, Z = 0, 1, 2
 
@@ -50,6 +50,14 @@ class arucoState:
         self.i_old = 0
 
         self.unit = 1e9
+
+        self.posX = lpfilterZ()
+        self.posY = lpfilterZ()
+        self.posZ = lpfilterZ()
+
+        self.Vx = lpfilterZ()
+        self.Vy = lpfilterZ()
+        self.Vz = lpfilterZ(1.75)
     
     def __repr__(self) -> str:
         return str(self.X)
@@ -67,12 +75,20 @@ class arucoState:
 
         # Applying a simple deadband filter to reduce flickering in data
         _t = 0.1
-        _X = deadband(self.X_new[X], self.X_old[X], _t)
-        _Y = deadband(self.X_new[Y], self.X_old[Y], _t)
+        #_X = deadband(self.X_new[X], self.X_old[X], _t)
+        #_Y = deadband(self.X_new[Y], self.X_old[Y], _t)
+        _X = round(self.X_new[X], 2)
+        _Y = round(self.X_new[Y], 2)
+        self.posX.update(_X)
+        self.posY.update(_Y)
+        _X = round(self.posX.get())
+        _Y = round(self.posY.get())
         #_Z = deadband(self.X_new[Z], self.X_old[Z], 0.05)
-        _tZ = round(self.X_new[Z],1)
-        self.Z.update(_tZ)
-        _Z = self.Z.get()
+        _Z = round(self.X_new[Z],2)
+        #self.posZ.update(_Z)
+        #_Z = self.posZ.get()
+        #self.Z.update(_tZ)
+        #_Z = self.Z.get()
         #A_Z = self.X_new[Z]
         _tt = [_X, _Y, _Z]
 
@@ -80,6 +96,14 @@ class arucoState:
             self.dt = dt
             for ie in range(3):
                 self.V[ie] = (_tt[ie] -  self.X_old[ie]) * self.unit / dt
+
+        self.Vx.update(self.V[X])
+        self.Vy.update(self.V[Y])
+        self.Vz.update(self.V[Z])
+
+        self.V[X] = self.Vx.get()
+        self.V[Y] = self.Vy.get()
+        self.V[Z] = self.Vz.get()
 
         self.X_old = list(self.X)
         self.X = list(_tt)

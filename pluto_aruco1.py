@@ -1,22 +1,23 @@
 from aruco.plutoCV import *
 from aruco.plutoPID import *
 from plutopy import plutoDrone
+from aruco.filter import lpfilterZ
 import csv
 from kalman_git import *
 
 import threading
 
 class plutoArUco:
-    def __init__(self, drone : plutoDrone, k : KalmanFilter, targetID : int = 43) -> None:
+    def __init__(self, drone : plutoDrone, targetID : int) -> None:
         self.PIDdelay = 0.001
         self.drone = drone
-        self.k = k
+        self.k = KalmanFilter()
         self.state = arucoState()
         self.target = XYZ()
         self.origin = XYZ()
         self.droneAngle = lowPassFilter()
         self.althold = True
-        self.kal = False 
+        self.Zfil = lpfilterZ()
         self.trims = []
         self._err = []
 
@@ -26,7 +27,7 @@ class plutoArUco:
 
         self.procs = [self.arucoPIDThread]
 
-        self.file = open(r'C:\Users\Bhuvan Narula\Downloads\dronedump.csv', 'w', newline='\n')
+        self.file = open(r'logs/dronedump.csv', 'w', newline='\n')
         self.csv = csv.writer(self.file)
 
         self.aruco = arucoGPS(self.state, targetID, self.droneAngle)
@@ -40,6 +41,8 @@ class plutoArUco:
 
         sleep(1)
 
+        self.positionPID = positionPID()
+
     def arucoCVThread(self):
         while self._threadsRunning:
             _err = self.aruco.loop(self.target)
@@ -47,6 +50,8 @@ class plutoArUco:
                 self._threadsRunning = False
                 self.stop_rest()
                 break
+            if self.origin.Z:
+                self.arucoPIDThread()
 
     def setOrigin(self, iter_n : int = 50):
         '''
@@ -68,6 +73,9 @@ class plutoArUco:
         self.origin.A = round(origin.A/iter_n, 2)
         print(self.origin.A)
 
+        # Configuring Kalman Filter
+        self.k.Configure(self.origin.Z - self.state.X[Z],0,(1-self.drone.state.accZ))
+
     def setTarget(self, X, Y, Z):
         if (self.origin.Z == 0):
             # origin is unset
@@ -76,66 +84,57 @@ class plutoArUco:
             self.target.X = X
             self.target.Y = Y
             self.target.Z = Z
-    def configureKalman(self,zvar,zaccelvar,zaccelbiasvar):
-        self.k.Configure(zvar,zaccelvar,zaccelbiasvar,drone.state.alt,0,(1-drone.state.accZ))
 
     def arucoPIDThread(self):
-        self.positionPID = positionPID()
-        rolll = lowPassFilter()
-        pitcc = lowPassFilter()
+        sleep(self.PIDdelay)
+        #sleep(0.1)self.drone.state.alt
+        _tt = self.state.X
+        self.k.Update(self.origin.Z - self.state.X[Z],self.drone.state.accZ,self.state.dt/self.state.unit)
+        angle = radians(self.origin.A - 90)
+        angle = radians(self.droneAngle.get() - 90)
+        cosA = cos(angle)
+        sinA = sin(angle)
+        _eX = self.target.X - _tt[X]
+        _eY = self.target.Y - _tt[Y]
+        _eX = _eX * cosA + _eY * sinA
+        _eY = _eY * cosA - _eX * sinA
+        self.Zfil.update(self.k.z_)
+        _err = [
+            _eX,
+            _eY,
+            self.target.Z - (self.Zfil.get()),
+            angle
+        ]
 
-        while self._threadsRunning:
-            sleep(self.PIDdelay)
-            #sleep(0.1)
-            angle = radians(self.origin.A - 90)
-            cosA = cos(angle)
-            sinA = sin(angle)
-            _tt = self.state.X
-            _eX = self.target.X - _tt[X]
-            _eY = self.target.Y - _tt[Y]
-            _eX = _eX * cosA + _eY * sinA
-            _eY = _eY * cosA - _eX * sinA
-            if self.kal == True:
-                _err = [
-                    _eX,
-                    _eY,
-                    self.target.Z - (self.origin.Z - self.k.z_),
-                    angle
-                ]
-            else:
-                _err = [
-                _eX,
-                _eY,
-                self.target.Z - (self.origin.Z - self.drone.state.alt),
-                angle
-            ]
-            if self.debug: print("Pos Err:", _err)
-            
-            pitch, roll, throttle, = self.positionPID.output(_err, self.state)
-            pitch = constrain(pitch, -400, 400)
-            roll = constrain(roll, -500, 500)
-            throttle = constrain(throttle, -300, 300)
-            #pitch = pitch * cosA + roll * sinA
-            #roll = roll * cosA - pitch * sinA
-            self.csv.writerow([*_err, pitch, roll, throttle])
-            print(_err[2], throttle)
-            pitcc.update(pitch)
-            rolll.update(roll)
+        if self.debug: print("Pos Err:", _err)
+        
+        pitch, roll, throttle, = self.positionPID.output(_err, self.state)
+        pitch = constrain(pitch, -400, 400)
+        roll = constrain(roll, -500, 500)
+        throttle = constrain(throttle, -300, 300)
+        #pitch = pitch * cosA + roll * sinA
+        #roll = roll * cosA - pitch * sinA
+        #self.csv.writerow([*_err, pitch, roll, throttle])
+        #self.csv.writerow([self.origin.Z - _tt[Z], self.drone.state.alt, _err[Z], self.drone.state.accZ])
+        zp = self.positionPID.lastP[Z]
+        zi = self.positionPID.lastI[Z]
+        zd = self.positionPID.lastD[Z]
+        self.csv.writerow([*_err[:3], pitch, roll, throttle, zp, zi, zd])
+        #print(_err[2], throttle)
 
-            self.k.Update(self.drone.state.alt,self.drone.state.accZ,self.state.dt)
-            #pitch = pitcc.get()-180
-            #roll = rolll.get()-180
-            #print(throttle)
-            if self.debug: print("Trim Val:", roll, pitch, throttle)
-            self.trims = [pitch, roll, throttle]
-            self._err = _err
+        #pitch = pitcc.get()-180
+        #roll = rolll.get()-180
+        #print(throttle)
+        if self.debug: print("Trim Val:", roll, pitch, throttle)
+        self.trims = [pitch, roll, throttle]
+        self._err = _err
 
-            #self.drone.MSP.sendRequestMSP_SET_ACC_TRIM(-int(roll), -int(pitch/2.5))
-            if self.althold == True :
+        #self.drone.MSP.sendRequestMSP_SET_ACC_TRIM(-int(roll), -int(pitch/2.5))
+        if self.althold == True :
 
-                self.drone.activeState.rcRoll = 1500 + int(roll)
-                self.drone.activeState.rcPitch = 1500 + int(pitch)
-                self.drone.activeState.rcThrottle = 1500 + int(throttle)
+            self.drone.activeState.rcRoll = 1500 + int(roll)
+            self.drone.activeState.rcPitch = 1500 + int(pitch)
+            self.drone.activeState.rcThrottle = 1500 + int(throttle)
         
     def start(self):
         if (self.origin.Z == 0):
