@@ -135,6 +135,9 @@ class plutoArUco:
             _th.join()
         self.file.flush()
         self.file.close()
+        self.drone.control.kill()
+        if self.drone._threadsRunning:
+            self.drone.disconnect()
 
     def stop(self):
         self.drone.control.kill()

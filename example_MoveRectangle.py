@@ -12,7 +12,7 @@ drone.control.throttleMode()
 drone.start()
 
 # Creating an ArUco Control instance, that will perform PID on drone
-aruco = plutoArUco(drone, arucoID=43)
+aruco = plutoArUco(drone, targetID = 5)
 # This should launch a camera feed.
 
 # Now, place the drone physically to a desired point, and set it as origin
@@ -25,7 +25,7 @@ print(aruco.origin)
 target = [
     aruco.origin.X,
     aruco.origin.Y,
-    20 # cm, Roughly 3.5 feet (3.5*30 = 105)
+    105 # cm, Roughly 3.5 feet (3.5*30 = 105)
 ]
 # Z (cm) should be height from ground (specifically, origin set initially)
 aruco.setTarget(*target)
@@ -46,10 +46,14 @@ The coordinates of corner become,
 then back to upper left.
 '''
 altitude = 105 # cm, Roughly 3.5 feet (3.5*30 = 105)
-top_l = (-100, -50, altitude)
-top_r = (100, -50, altitude)
-bot_r = (100, 50, altitude)
-bot_l = (-100, 50, altitude)
+top_l = (-150, -75, altitude)
+top_r = (50, -75, altitude)
+bot_r = (50, 25, altitude)
+bot_l = (-150, 25, altitude)
+path = [top_l, top_r, bot_r, bot_l, top_l]
+for pt in path:
+    sleep(6)
+    aruco.setTarget(*pt)
 
 # Path will be center -> top_l -> top_r -> bot_r -> bot_l -> top_l
 # TODO Write Loop/Code to make drone follow this path
