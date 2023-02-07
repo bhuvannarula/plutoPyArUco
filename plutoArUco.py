@@ -17,18 +17,18 @@ class plutoArUco:
         self.droneAngle = lowPassFilter()
         self.Zfil = lpfilterZ()
         self._err = []
-
+        self.waypoints = []
         self._threadsRunning = True
         self.debug = 0
         self._threads = []
-
+        self.err_rec = [[],[],[],[]]
         self.procs = [self.arucoPIDThread]
-
+        self.target_ = self.target
         self.file = open(r'logs/dumpPID.csv', 'w', newline='\n')
         self.csv = csv.writer(self.file)
-
+        self.c = 0
         self.aruco = arucoGPS(self.state, targetID, self.droneAngle)
-
+        self.waytime = 0
         sleep(1)
 
         _proc = self.arucoCVThread
@@ -40,6 +40,8 @@ class plutoArUco:
 
         self.positionPID = positionPID()
 
+    def addWaypoint(self, x = [0,0,0]):
+            self.waypoints.append(x)
     def arucoCVThread(self):
         while self._threadsRunning:
             _err = self.aruco.loop()
@@ -82,6 +84,13 @@ class plutoArUco:
 
     def arucoPIDThread(self):
         sleep(self.PIDdelay)
+        if self.waypoint - self.target_ < [.5,.5,.5]:
+            self.target_ = self.waypoint
+            if sum(self.err_rec[0][-50:])/50 < 3 and sum(self.err_rec[1][-50:])/50 < 3 and sum(self.err_rec[2][-50:])/50 < 3 :
+                self.c += 1
+                self.waypoint = self.waypoints[self.c]
+                self.waytime = nowtime()
+        self.target_ = self.waypoints[self.c-1] + [min((self.waypoints[self.c][0]-self.waypoints[self.c-1][0]),1.5*((nowtime()-self.waytime)*self.state.unit)),min((self.waypoints[self.c][1]-self.waypoints[self.c-1][1]),1.5*((nowtime()-self.waytime)*self.state.unit)),min((self.waypoints[self.c][2]-self.waypoints[self.c-1][2]),1.5*((nowtime()-self.waytime)*self.state.unit))]
         _tt = self.state.X
         self.k.Update(self.origin.Z - self.state.X[Z],self.drone.state.accZ,self.state.dt/self.state.unit)
         angle = radians(self.origin.A - 90)
@@ -119,7 +128,10 @@ class plutoArUco:
         self.drone.activeState.rcRoll = 1500 + int(roll)
         self.drone.activeState.rcPitch = 1500 + int(pitch)
         self.drone.activeState.rcThrottle = 1500 + int(throttle)
-        
+        for i in len(self.err_rec):
+            self.err_rec[i].append(self._err[0])
+            if len(self.err_rec[i]) > 50:
+                self.err_rec[i].pop(0)
     def start(self):
         if (self.origin.Z == 0):
             print("Warning: Origin not set!")
