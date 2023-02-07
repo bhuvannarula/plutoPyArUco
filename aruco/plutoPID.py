@@ -107,6 +107,6 @@ class positionPID:
 
         self.last_vel = [vel_X, vel_Y, vel_Z]
 
-        self.last_result = [result_X, result_Y, result_Z]
+        self.last_result = [result_X, result_Y, 40]
 
-        return (result_X, result_Y, result_Z)
+        return (result_X, result_Y, 40)
