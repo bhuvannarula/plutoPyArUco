@@ -1,4 +1,4 @@
-from pluto_aruco import *
+from plutoArUco import *
 from plutopy import plutoDrone
 
 drone = plutoDrone() 

@@ -1,4 +1,4 @@
-from pluto_aruco import *
+from plutoArUco import *
 from plutopy import plutoDrone
 
 # Creating a plutoDrone instance, which allows basic controls of drone, 

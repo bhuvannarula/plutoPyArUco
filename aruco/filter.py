@@ -1,6 +1,5 @@
 from time import perf_counter_ns as nowtime
 from scipy.signal import butter, lfilter
-from math import pi
 
 class lowPassFilter:
     def __init__(self) -> None:
@@ -34,11 +33,11 @@ class lowPassFilter:
         return (delta/dT)
 
 class lpfilterZ:
-    def __init__(self) -> None:
+    def __init__(self, lowcut : int = 2) -> None:
         order = 2
         fs = 30
         nyq = 0.5 * fs
-        lowcut = 2
+        lowcut = lowcut
         low = lowcut/nyq
         b, a = butter(order, low, btype='low')
         self.b = b
