@@ -17,7 +17,7 @@ class video:
         if not _status:
             raise Exception("Error: Camera Not Connected, Try Again")
         else:
-            print("Camera Connected")
+            print("Camera Connected!")
         self.video.set(cv.CAP_PROP_FPS, 40)
         #self.video.set(cv.CAP_PROP_AUTOFOCUS, 0)
         self.video.set(cv.CAP_PROP_FRAME_WIDTH, self.dim[0])
@@ -80,7 +80,7 @@ class arucoGPS:
             gray_frame, self.marker_dict, parameters=self.param_markers
         )
         rVec, tVec, _ = cv.aruco.estimatePoseSingleMarkers(marker_corners, self.MARKER_SIZE_1, self.cam_mat, self.dist_coef)
-        (rVec - tVec).any()
+        #(rVec - tVec).any()
 
         if marker_corners:
             total_markers = range(0, len(marker_IDs))

@@ -85,7 +85,7 @@ class plutoArUco:
         _tt = self.state.X
         self.k.Update(self.origin.Z - self.state.X[Z],self.drone.state.accZ,self.state.dt/self.state.unit)
         angle = radians(self.origin.A - 90)
-        #angle = radians(self.droneAngle.get() - 90)
+        angle = radians(self.droneAngle.get() - 90)
         cosA = cos(angle)
         sinA = sin(angle)
         _eX = self.target.X - _tt[X]
@@ -135,13 +135,8 @@ class plutoArUco:
             _th.join()
         self.file.flush()
         self.file.close()
+
+    def stop(self):
         self.drone.control.kill()
         if self.drone._threadsRunning:
             self.drone.disconnect()
-
-    def stop(self):
-        self._threadsRunning = False
-        for _th in self._threads:
-            _th.join()
-        self.drone.control.kill()
-        self.drone.disconnect()

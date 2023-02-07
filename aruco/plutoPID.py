@@ -33,6 +33,10 @@ class positionPID:
         self.last_vel = [0]*3
         self.last_result = [0]*3
 
+        self.lastP = [0]*3
+        self.lastI = [0]*3
+        self.lastD = [0]*3
+
         self.wo = 70
 
     def output(self, pos_err : list, state : arucoState):

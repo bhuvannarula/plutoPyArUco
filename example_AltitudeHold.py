@@ -34,7 +34,7 @@ aruco.setTarget(*target)
 drone.control.take_off()
 aruco.start() # Starts the PID script
 
-# Now, wait until user presses 'Enter' key, then stop all code, and close the socket.
+# PRESS 'Q' or 'q' to stop camera feed, and disconnect the drone.
 _ = input()
 drone.control.land()
 aruco.stop()
