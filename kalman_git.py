@@ -88,9 +88,12 @@ class KalmanFilter:
         self.Pav_ -= ka * self.Pzv_
         self.Paa_ -= ka * self.Pza_
 
-        self.Pzv_ -= kz * self.Pvz_
-        self.Pvv_ -= kz * self.Pvv_
-        self.Pva_ -= kz * self.Pva_
+        self.Pvz_ -= kv * self.Pzz_
+        self.Pvv_ -= kv * self.Pzv_
+        self.Pva_ -= kv * self.Pza_
 
+        self.Pzz_ -= kz * self.Pzz_
+        self.Pzv_ -= kz * self.Pzv_
+        self.Pza_ -= kz * self.Pza_
         
     
