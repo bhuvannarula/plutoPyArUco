@@ -17,7 +17,7 @@ class plutoArUco:
         self.droneAngle = lowPassFilter()
         self.Zfil = lpfilterZ()
         self._err = []
-        self.waypoints = []
+        self.waypoints = [[0,0,0]]
         self._threadsRunning = True
         self.debug = 0
         self._threads = []
@@ -26,7 +26,7 @@ class plutoArUco:
         self.target_ = []
         self.file = open(r'logs/dumpPID.csv', 'w', newline='\n')
         self.csv = csv.writer(self.file)
-        self.c = 0
+        self.c = 1
         self.aruco = arucoGPS(self.state, targetID, self.droneAngle)
         self.waytime = 0
         self.speed = 2
@@ -57,6 +57,7 @@ class plutoArUco:
         '''
         Reading first 'iter_n' values & averaging to find origin, ground
         '''
+
         origin = XYZ()
         for _i  in range(iter_n):
             sleep(self.PIDdelay)
@@ -70,7 +71,7 @@ class plutoArUco:
         self.origin.Z = int(origin.Z/iter_n)
         self.origin.A = round(origin.A/iter_n, 2)
         print("Angle of Drone:", self.origin.A)
-
+        
         # Configuring Kalman Filter
         self.k.Configure(self.origin.Z - self.state.X[Z],0,(1-self.drone.state.accZ))
 
@@ -82,23 +83,26 @@ class plutoArUco:
             self.target.X = X
             self.target.Y = Y
             self.target.Z = Z
-
+        
     def arucoPIDThread(self):
         sleep(self.PIDdelay)
-        self.waypoint = self.waypoints[0]
         if self.alt_reached == False:
-            if [sum(list(map(abs, self.err_rec[i]))[-50:])/len(self.err_rec[i]) for i in range(2)] < [3,3,3]:
+            if len(self.err_rec[0]) > 40 and [sum(list(map(abs, self.err_rec[i]))[-50:])/len(self.err_rec[i]) for i in range(2)] < [3,3,3]:
                 self.alt_reached = True
+                self.waytime = nowtime()
         elif self.alt_reached == True:
-            if [x1 - x2 for (x1, x2) in zip(self.waypoint, self.target_)] < [.5,.5,.5]:
-                self.target_ = self.waypoint
-                if [sum(list(map(abs, self.err_rec[i]))[-50:])/len(self.err_rec[i]) for i in range(2)] < [3,3,3]  :
-                    self.c += 1
-                    self.waypoint = self.waypoints[self.c]
-                    self.waytime = nowtime()
+            if self.target_ == self.waypoint or [x1 - x2 for (x1, x2) in zip(self.waypoint, self.target_)] < [.1,.1,.1]:
+                if self.target_ != self.waypoint:
+                    self.target_ = self.waypoint
+                if len(self.err_rec[0]) > 40 and [sum(list(map(abs, self.err_rec[i]))[-50:])/len(self.err_rec[i]) for i in range(2)] < [3,3,3]  :
+                    if self.c != len(self.waypoints):
+                        self.c += 1
+                        self.waypoint = self.waypoints[self.c]
+                        self.waytime = nowtime()
+                    else:
+                        print('Last Waypoint reached!')
             else:
-                self.target_ = self.waypoints[self.c-1] + [min((x1 - x2 ),self.speed*((nowtime()-self.waytime)/self.state.unit)) for (x1, x2) in zip(self.waypoints[self.c], self.waypoints[self.c-1])]
-
+                self.target_ = self.waypoints[self.c-1] + [min((x1 - x2 ),self.speed*((nowtime()-self.waytime)/self.state.unit)) for (x1, x2) in zip(self.waypoints[self.c], self.waypoints[self.c-1])] 
             self.setTarget(self.target_[0],self.target_[1],self.target_[2])
         _tt = self.state.X
         self.k.Update(self.origin.Z - self.state.X[Z],self.drone.state.accZ,self.state.dt/self.state.unit)
@@ -138,10 +142,12 @@ class plutoArUco:
         self.drone.activeState.rcPitch = 1500 + int(pitch)
         self.drone.activeState.rcThrottle = 1500 + int(throttle)
         for i in range(len(self.err_rec)):
-            self.err_rec[i].append(self._err[0])
+            self.err_rec[i].append(self._err[i])
             if len(self.err_rec[i]) > 50:
                 self.err_rec[i].pop(0)
     def start(self):
+        self.waypoints[0] = [self.origin.X,self.origin.Y,90]
+        self.waypoint = self.waypoints[1]
         if (self.origin.Z == 0):
             print("Warning: Origin not set!")
         self._threadsRunning = True
