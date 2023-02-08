@@ -23,14 +23,15 @@ class plutoArUco:
         self._threads = []
         self.err_rec = [[],[],[],[]]
         self.procs = [self.arucoPIDThread]
-        self.target_ = self.target
+        self.target_ = []
         self.file = open(r'logs/dumpPID.csv', 'w', newline='\n')
         self.csv = csv.writer(self.file)
         self.c = 0
         self.aruco = arucoGPS(self.state, targetID, self.droneAngle)
         self.waytime = 0
+        self.speed = 2
         sleep(1)
-
+        self.alt_reached = False
         _proc = self.arucoCVThread
         _thread = threading.Thread(target=_proc)
         _thread.start()
@@ -84,13 +85,21 @@ class plutoArUco:
 
     def arucoPIDThread(self):
         sleep(self.PIDdelay)
-        if self.waypoint - self.target_ < [.5,.5,.5]:
-            self.target_ = self.waypoint
-            if sum(self.err_rec[0][-50:])/50 < 3 and sum(self.err_rec[1][-50:])/50 < 3 and sum(self.err_rec[2][-50:])/50 < 3 :
-                self.c += 1
-                self.waypoint = self.waypoints[self.c]
-                self.waytime = nowtime()
-        self.target_ = self.waypoints[self.c-1] + [min((self.waypoints[self.c][0]-self.waypoints[self.c-1][0]),1.5*((nowtime()-self.waytime)*self.state.unit)),min((self.waypoints[self.c][1]-self.waypoints[self.c-1][1]),1.5*((nowtime()-self.waytime)*self.state.unit)),min((self.waypoints[self.c][2]-self.waypoints[self.c-1][2]),1.5*((nowtime()-self.waytime)*self.state.unit))]
+        self.waypoint = self.waypoints[0]
+        if self.alt_reached == False:
+            if sum(self.err_rec[2][-50:])/50 < 3:
+                self.alt_reached = True
+        elif self.alt_reached == True:
+            if [x1 - x2 for (x1, x2) in zip(self.waypoint, self.target)] < [.5,.5,.5]:
+                self.target_ = self.waypoint
+                if sum(self.err_rec[0][-50:])/50 < 3 and sum(self.err_rec[1][-50:])/50 < 3 and sum(self.err_rec[2][-50:])/50 < 3 :
+                    self.c += 1
+                    self.waypoint = self.waypoints[self.c]
+                    self.waytime = nowtime()
+            else:
+                self.target_ = self.waypoints[self.c-1] + [min((x1 - x2 ),self.speed*((nowtime()-self.waytime)*self.state.unit)) for (x1, x2) in zip(self.waypoints[self.c], self.waypoints[self.c-1])]
+
+            self.setTarget(self.target_[0],self.target_[1],self.target_[2])
         _tt = self.state.X
         self.k.Update(self.origin.Z - self.state.X[Z],self.drone.state.accZ,self.state.dt/self.state.unit)
         angle = radians(self.origin.A - 90)

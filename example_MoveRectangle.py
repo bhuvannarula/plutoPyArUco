@@ -29,9 +29,13 @@ target = [
 ]
 # Z (cm) should be height from ground (specifically, origin set initially)
 aruco.setTarget(*target)
-
+aruco.addWaypoint([100,0,100])
+aruco.addWaypoint([100,200,100])
+aruco.addWaypoint([0,200,100])
+aruco.addWaypoint([0,0,100])
 # Once initial target is set, we can take-off the drone, and start the PID
 drone.control.take_off()
+
 aruco.start() # Starts the PID script
 
 '''
@@ -45,11 +49,6 @@ The coordinates of corner become,
 (-1m, 0.5m) -> Bottom Left -> (-100, 50) (in cm)
 then back to upper left.
 '''
-altitude = 105 # cm, Roughly 3.5 feet (3.5*30 = 105)
-top_l = (-100, -50, altitude)
-top_r = (100, -50, altitude)
-bot_r = (100, 50, altitude)
-bot_l = (-100, 50, altitude)
 
 # Path will be center -> top_l -> top_r -> bot_r -> bot_l -> top_l
 # TODO Write Loop/Code to make drone follow this path
