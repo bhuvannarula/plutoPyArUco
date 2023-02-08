@@ -12,9 +12,10 @@ Autonomous Control of Pluto Drone using ArUco Marker(s)
     - Pre-Requisites
     - Installation
     - How to Run
-- [Usage Instructions](#usage-instructions)
-    - Connection
-    - Control System
+- [Implementations](#implementations)
+    - Basic Functions
+    - Altitude Hold
+    - Rectangular Motion
 - [Methodology](#methodology)
     - Pose Estimation
     - Controller
