@@ -21,7 +21,7 @@ class plutoArUco:
         self._threadsRunning = True
         self.debug = 0
         self._threads = []
-        self.err_rec = [[],[],[],[]]
+        self.err_rec = [[0],[0],[0],[0]]
         self.procs = [self.arucoPIDThread]
         self.target_ = []
         self.file = open(r'logs/dumpPID.csv', 'w', newline='\n')
@@ -87,17 +87,17 @@ class plutoArUco:
         sleep(self.PIDdelay)
         self.waypoint = self.waypoints[0]
         if self.alt_reached == False:
-            if sum(self.err_rec[2][-50:])/len(self.err_rec[2]) < 3:
+            if [sum(list(map(abs, self.err_rec[i]))[-50:])/len(self.err_rec[i]) for i in range(2)] < [3,3,3]:
                 self.alt_reached = True
         elif self.alt_reached == True:
-            if [x1 - x2 for (x1, x2) in zip(self.waypoint, self.target)] < [.5,.5,.5]:
+            if [x1 - x2 for (x1, x2) in zip(self.waypoint, self.target_)] < [.5,.5,.5]:
                 self.target_ = self.waypoint
-                if [sum(list(map(self.err_rec[i],abs))[-50:])/len(self.err_rec[i]) for i in range(2)] < [3,3,3]  :
+                if [sum(list(map(abs, self.err_rec[i]))[-50:])/len(self.err_rec[i]) for i in range(2)] < [3,3,3]  :
                     self.c += 1
                     self.waypoint = self.waypoints[self.c]
                     self.waytime = nowtime()
             else:
-                self.target_ = self.waypoints[self.c-1] + [min((x1 - x2 ),self.speed*((nowtime()-self.waytime)*self.state.unit)) for (x1, x2) in zip(self.waypoints[self.c], self.waypoints[self.c-1])]
+                self.target_ = self.waypoints[self.c-1] + [min((x1 - x2 ),self.speed*((nowtime()-self.waytime)/self.state.unit)) for (x1, x2) in zip(self.waypoints[self.c], self.waypoints[self.c-1])]
 
             self.setTarget(self.target_[0],self.target_[1],self.target_[2])
         _tt = self.state.X
@@ -137,7 +137,7 @@ class plutoArUco:
         self.drone.activeState.rcRoll = 1500 + int(roll)
         self.drone.activeState.rcPitch = 1500 + int(pitch)
         self.drone.activeState.rcThrottle = 1500 + int(throttle)
-        for i in len(self.err_rec):
+        for i in range(len(self.err_rec)):
             self.err_rec[i].append(self._err[0])
             if len(self.err_rec[i]) > 50:
                 self.err_rec[i].pop(0)

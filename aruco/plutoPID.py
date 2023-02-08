@@ -12,17 +12,17 @@ class positionPID:
         self.iPOS = [0]*3
         self.dPOS = [0]*3
 
-        self.pPOS[X] = 1.25 # 8 # 0.2 (2 0/5) (4,1) (6,0.3) (2, 0.625)
+        self.pPOS[X] = 1.5 # 8 # 0.2 (2 0/5) (4,1) (6,0.3) (2, 0.625)
         self.iPOS[X] = 0#.00001
-        self.dPOS[X] = 0.625#9#50#10 # 0.5
+        self.dPOS[X] = 0.625#9#50#10 # 0.5 (1.25, 0.625)
 
-        self.pPOS[Y] = 1.25
+        self.pPOS[Y] = 1.5
         self.iPOS[Y] = 0.005
         self.dPOS[Y] = 0.625#9#50#40
 
-        self.pPOS[Z] = 2#2#0.1#2
-        self.iPOS[Z] = 1.6#3#0.3#.015#.2
-        self.dPOS[Z] = 1.25#1.45#1#.1 #(2, 1.6, 1.25)
+        self.pPOS[Z] = 1.75#2#0.1#2
+        self.iPOS[Z] = 0.95#3#0.3#.015#.2
+        self.dPOS[Z] = 1#1.45#1#.1 #(2, 1.6, 1.25)
 
         self.pVEL = 4
         self.iVEL = 0.8
@@ -61,9 +61,9 @@ class positionPID:
         self.lastZ = pos_err[Z]
 
         # Calculating the P-Term
-        result_X = constrain(self.pPOS[X] * pos_err[X], -100, 100)
-        result_Y = constrain(self.pPOS[Y] * pos_err[Y], -100, 100)
-        result_Z = constrain(self.pPOS[Z] * pos_err[Z], -200, 200)
+        result_X = constrain(self.pPOS[X] * pos_err[X], -150, 150)
+        result_Y = constrain(self.pPOS[Y] * pos_err[Y], -150, 150)
+        result_Z = constrain(self.pPOS[Z] * pos_err[Z], -150, 150)
         p_x = constrain(self.pPOS[X] * pos_err[X], -500, 500)
         p_y = constrain(self.pPOS[Y] * pos_err[Y], -500, 500)
         p_z = constrain(self.pPOS[Z] * pos_err[Z], -500, 500)
@@ -74,8 +74,8 @@ class positionPID:
         self.iTerm[Z] += (self.iPOS[Z] * pos_err[Z]) * dt / self.unit
         
         self.iTerm[X] = constrain(self.iTerm[X], -50, 50)
-        self.iTerm[Y] = constrain(self.iTerm[Y], -500, 500)
-        self.iTerm[Z] = constrain(self.iTerm[Z], -300, 300)
+        self.iTerm[Y] = constrain(self.iTerm[Y], -100, 100)
+        self.iTerm[Z] = constrain(self.iTerm[Z], -200, 200)
 
         result_X += self.iTerm[X]
         result_Y += self.iTerm[Y]
