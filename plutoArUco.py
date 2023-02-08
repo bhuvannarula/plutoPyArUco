@@ -87,7 +87,7 @@ class plutoArUco:
         sleep(self.PIDdelay)
         self.waypoint = self.waypoints[0]
         if self.alt_reached == False:
-            if sum(self.err_rec[2][-50:])/len(self.err_rec[0]) < 3:
+            if sum(self.err_rec[2][-50:])/len(self.err_rec[2]) < 3:
                 self.alt_reached = True
         elif self.alt_reached == True:
             if [x1 - x2 for (x1, x2) in zip(self.waypoint, self.target)] < [.5,.5,.5]:
