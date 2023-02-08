@@ -87,12 +87,12 @@ class plutoArUco:
         sleep(self.PIDdelay)
         self.waypoint = self.waypoints[0]
         if self.alt_reached == False:
-            if sum(self.err_rec[2][-50:])/50 < 3:
+            if sum(self.err_rec[2][-50:])/len(self.err_rec[0]) < 3:
                 self.alt_reached = True
         elif self.alt_reached == True:
             if [x1 - x2 for (x1, x2) in zip(self.waypoint, self.target)] < [.5,.5,.5]:
                 self.target_ = self.waypoint
-                if sum(self.err_rec[0][-50:])/50 < 3 and sum(self.err_rec[1][-50:])/50 < 3 and sum(self.err_rec[2][-50:])/50 < 3 :
+                if [sum(list(map(self.err_rec[i],abs))[-50:])/len(self.err_rec[i]) for i in range(2)] < [3,3,3]  :
                     self.c += 1
                     self.waypoint = self.waypoints[self.c]
                     self.waytime = nowtime()
