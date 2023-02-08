@@ -12,7 +12,7 @@ drone.control.throttleMode()
 drone.start()
 
 # Creating an ArUco Control instance, that will perform PID on drone
-aruco = plutoArUco(drone, targetID = 5)
+aruco = plutoArUco(drone, droneID = 5)
 # This should launch a camera feed.
 
 # Now, place the drone physically to a desired point, and set it as origin
@@ -25,7 +25,7 @@ print(aruco.origin)
 target = [
     aruco.origin.X,
     aruco.origin.Y,
-    105 # cm, Roughly 3.5 feet (3.5*30 = 105)
+    90 # cm, Roughly 3.5 feet (3.5*30 = 105)
 ]
 # Z (cm) should be height from ground (specifically, origin set initially)
 aruco.setTarget(*target)
@@ -39,28 +39,23 @@ Now, to move in a shape of rectangle (2m by 1m) (x by y),
 Let's say we are in center of rectangle, initially.
 We need to move to one of the corners of rectangle.
 The coordinates of corner become,
-(-1m, -0.5m) -> Upper Left -> (-100, -50) (in cm)
-(1m, -0.5m) -> Upper Right -> (100, -50) (in cm)
-(1m, 0.5m) -> Bottom Right -> (100, 50) (in cm)
-(-1m, 0.5m) -> Bottom Left -> (-100, 50) (in cm)
+(-1m, -0.5m) -> Upper Left -> (-50, -25)
+(1m, -0.5m) -> Upper Right -> (50, -25)
+(1m, 0.5m) -> Bottom Right -> (50, 25)
+(-1m, 0.5m) -> Bottom Left -> (-50, 25)
 then back to upper left.
 '''
-altitude = 105 # cm, Roughly 3.5 feet (3.5*30 = 105)
-top_l = (-150, -75, altitude)
-top_r = (50, -75, altitude)
+altitude = 90 # cm, Roughly 3.5 feet (3.5*30 = 105)
+top_l = (-50, -25, altitude)
+top_r = (50, -25, altitude)
 bot_r = (50, 25, altitude)
-bot_l = (-150, 25, altitude)
+bot_l = (-50, 25, altitude)
 path = [top_l, top_r, bot_r, bot_l, top_l]
 for pt in path:
     sleep(6)
     aruco.setTarget(*pt)
 
 # Path will be center -> top_l -> top_r -> bot_r -> bot_l -> top_l
-# TODO Write Loop/Code to make drone follow this path
-# Method: Set Target, Check if drone has reached target, then change target.
-# Suggestion : Set small targets in midway (instead of directly setting corners as targets)
-aruco.state.X # -> Gives live coordinates of Drone as (x, y, z)
-# Use above list to check current position of drone.
 
 # Now, wait until user presses 'Enter' key, then stop all code, and close the socket.
 _ = input()

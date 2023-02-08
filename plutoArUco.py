@@ -7,7 +7,7 @@ from aruco.kalman import KalmanFilter
 import threading
 
 class plutoArUco:
-    def __init__(self, drone : plutoDrone, targetID : int) -> None:
+    def __init__(self, drone : plutoDrone, droneID : int) -> None:
         self.PIDdelay = 0.001
         self.drone = drone
         self.k = KalmanFilter()
@@ -27,7 +27,7 @@ class plutoArUco:
         self.file = open(r'logs/dumpPID.csv', 'w', newline='\n')
         self.csv = csv.writer(self.file)
 
-        self.aruco = arucoGPS(self.state, targetID, self.droneAngle)
+        self.aruco = arucoGPS(self.state, droneID, self.droneAngle)
 
         sleep(1)
 

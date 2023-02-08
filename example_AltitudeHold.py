@@ -12,7 +12,7 @@ drone.control.throttleMode()
 drone.start()
 
 # Creating an ArUco Control instance, that will perform PID on drone
-aruco = plutoArUco(drone, targetID = 5)
+aruco = plutoArUco(drone, droneID = 5)
 # This should launch a camera feed.
 
 # Now, place the drone physically to a desired point, and set it as origin
@@ -23,16 +23,17 @@ print(aruco.origin)
 
 # So, for altitude hold, setting target:
 target = [
-    0,
-    0,
-    105 # cm, Roughly 3.5 feet (3.5*30 = 105)
+    aruco.origin.X,
+    aruco.origin.Y,
+    90 # cm, Roughly 3.5 feet (3.5*30 = 105)
 ]
 # Z (cm) should be height from ground (specifically, origin set initially)
-aruco.setTarget(*target)
+
 
 # Once initial target is set, we can take-off the drone, and start the PID
 drone.control.take_off()
-aruco.start() # Starts the PID script
+
+aruco.setTarget(*target)
 
 # PRESS 'Q' or 'q' to stop camera feed, and disconnect the drone.
 _ = input()
